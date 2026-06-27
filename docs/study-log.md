@@ -43,3 +43,9 @@
 - [ ] Git 기본 명령어 정리하기
 - [ ] `/logs` API 만들기
 - [ ] README에 로컬 실행 방법 추가하기
+
+- `/logs` API를 추가했다.
+- FastAPI의 `BaseModel`을 사용해서 요청 데이터 형식을 정의했다.
+- `/docs`에서 POST 요청과 GET 요청을 테스트했다.
+- `GET /logs`와 `POST /logs`의 역할 차이를 확인했다.
+- `Address already in use` 에러는 기존 uvicorn 서버가 8000번 포트를 사용 중일 때 발생한다는 것을 알았다.
