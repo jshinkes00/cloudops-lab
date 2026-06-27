@@ -49,3 +49,16 @@
 - `/docs`에서 POST 요청과 GET 요청을 테스트했다.
 - `GET /logs`와 `POST /logs`의 역할 차이를 확인했다.
 - `Address already in use` 에러는 기존 uvicorn 서버가 8000번 포트를 사용 중일 때 발생한다는 것을 알았다.
+
+### 1. `uvicorn app.main:app --reload`에서 각각의 뜻
+- `app.main`: app폴더 안에 있는 main.py
+- 마지막 `app`: main.py안에 app= fastapi() 변수명
+- `--reload`: 코드를 수정하면 서버를 자동으로 다시 실행해주는 옵션
+
+### 2. `GET /logs`와 `POST /logs` 차이
+- GET /logs: 현재 저장된 로그 목록을 조회하는 api
+- POST /logs:클라이언트가 보낸 데이터를 받아서 새 로그를 생성하는 api
+
+### 3. `logs = []`의 한계
+- 서버가 꺼지면: 파이썬의 리스트 자료구조를 사용하여 데이터 임시저장 서버를 끄면 데이터 사라진다
+- 그래서 나중에 필요한 것:sql lite 를 사용하여 데이터를 실제로  저장
