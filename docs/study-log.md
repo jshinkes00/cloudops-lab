@@ -82,3 +82,32 @@
 - 그래서 나중에는 SQLite 같은 데이터베이스가 필요하다.
 - `Attribute "app" not found` 에러는 `main.py` 안에 `app = FastAPI()` 객체가 없거나 저장되지 않았을 때 발생할 수 있다.
 - `Address already in use`는 8000번 포트를 이미 다른 서버가 사용 중이라는 뜻이다.
+
+
+## 2026-07-06
+
+### 오늘 한 일
+- 기존 `logs = []` 메모리 저장 방식에서 SQLite 저장 방식으로 변경했다.
+- `app/database.py` 파일을 만들고 SQLite 연결 함수를 작성했다.
+- `POST /logs` 요청이 들어오면 SQLite DB에 로그를 저장하도록 수정했다.
+- `GET /logs` 요청이 들어오면 SQLite DB에서 로그 목록을 조회하도록 수정했다.
+- 서버를 껐다 켜도 데이터가 유지되는지 확인했다.
+
+### 배운 것
+- `logs = []`는 메모리에 저장되기 때문에 서버를 끄면 데이터가 사라진다.
+- SQLite는 파일 기반 데이터베이스라서 서버를 재시작해도 데이터가 유지된다.
+- `INSERT`는 데이터를 추가할 때 사용한다.
+- `SELECT`는 데이터를 조회할 때 사용한다.
+- `connection.commit()`을 해야 DB 변경사항이 실제로 저장된다.
+- `cursor.fetchall()`은 조회 결과를 여러 개 가져올 때 사용한다.
+
+### 막힌 것
+- `get_connection` 함수를 import하지 못하는 에러가 발생했다.
+
+### 해결
+- `app/database.py` 안에 `get_connection()`과 `init_db()` 함수를 제대로 작성해서 해결했다.
+
+### 다음 할 일
+- [ ] `GET /logs/{log_id}`를 SQLite 방식으로 구현하기
+- [ ] `DELETE /logs/{log_id}`를 SQLite 방식으로 구현하기
+- [ ] README에 SQLite 사용 내용 추가하기
