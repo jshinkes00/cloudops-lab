@@ -1,29 +1,44 @@
 # FastAPI 프레임워크에서 FastAPI 클래스를 가져옴
-# FastAPI는 API 서버를 만들 때 사용하는 프레임워크
-from fastapi import FastAPI, HTTPException
+# FastAPI: API 서버 객체를 만들 때 사용
+from fastapi import FastAPI
 
 # Pydantic의 BaseModel을 가져옴
-# 클라이언트가 보내는 JSON 데이터의 형식을 정의하고 검사할 때 사용
+# 클라이언트가 보내는 JSON 데이터 형식을 정의하고 검사할 때 사용
 from pydantic import BaseModel
+
+# asynccontextmanager는 FastAPI 앱의 시작/종료 시점에 실행할 코드를 만들 때 사용
+# lifespan 방식에서 필요함
+from contextlib import asynccontextmanager
+
+# 우리가 만든 database.py에서 DB 관련 함수 가져오기
+from app.database import get_connection, init_db
+
+
+# lifespan 함수
+# FastAPI 앱이 시작될 때와 종료될 때 실행할 작업을 정의함
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 앱 시작 시 실행되는 부분
+    # 서버가 켜질 때 DB와 logs 테이블을 준비함
+    init_db()
+
+    # yield 이전: 서버 시작 시 실행
+    # yield 이후: 서버 종료 시 실행
+    yield
+
+    # 앱 종료 시 실행되는 부분
+    # 지금은 종료할 때 따로 정리할 작업이 없어서 pass
+    pass
 
 
 # FastAPI 앱 객체 생성
-# uvicorn app.main:app --reload 에서 마지막 app이 바로 이 변수
-app = FastAPI()
+# lifespan=lifespan을 넣어서 서버 시작 시 init_db()가 실행되게 함
+# uvicorn app.main:app --reload 에서 마지막 app이 바로 이 변수임
+app = FastAPI(lifespan=lifespan)
 
 
-# 아직 DB를 사용하지 않기 때문에 임시로 리스트에 데이터를 저장함
-# 서버를 끄거나 재시작하면 이 안의 데이터는 사라짐
-logs = []
-
-
-# 로그 id를 만들기 위한 변수
-# 새 로그가 생성될 때마다 1씩 증가시킬 예정
-next_id = 1
-
-
-# 클라이언트가 POST /logs로 보낼 데이터 형식
-# 사용자가 직접 보내는 값은 category와 content만 있음
+# POST /logs 요청으로 들어올 데이터 형식 정의
+# 사용자는 category와 content만 보냄
 class LogCreate(BaseModel):
     # 기록 종류: study, workout, weight 등
     category: str
@@ -33,84 +48,83 @@ class LogCreate(BaseModel):
 
 
 # GET /
-# API 서버 기본 접속 확인용
+# API 기본 접속 확인용
 @app.get("/")
 def root():
     return {"message": "CloudOps Lab API"}
 
 
 # GET /health
-# 서버 상태 확인용 API
+# 서버가 정상 작동 중인지 확인하는 API
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
 
 
 # GET /logs
-# 현재 저장된 전체 로그 목록 조회
+# SQLite DB에 저장된 전체 로그 목록 조회
 @app.get("/logs")
 def get_logs():
+    # DB 연결 생성
+    connection = get_connection()
+
+    # SQL 실행용 cursor 생성
+    cursor = connection.cursor()
+
+    # logs 테이블에서 모든 로그 조회
+    # ORDER BY id DESC는 최신 로그가 위로 오게 정렬한다는 뜻
+    cursor.execute("SELECT id, category, content FROM logs ORDER BY id DESC")
+
+    # 조회 결과 전체 가져오기
+    rows = cursor.fetchall()
+
+    # DB 연결 닫기
+    connection.close()
+
+    # sqlite3.Row 객체를 일반 dict로 변환해서 반환
+    logs = []
+    for row in rows:
+        logs.append({
+            "id": row["id"],
+            "category": row["category"],
+            "content": row["content"]
+        })
+
     return logs
 
 
 # POST /logs
-# 새 로그 생성
+# 새 로그를 SQLite DB에 저장
 @app.post("/logs")
 def create_log(log: LogCreate):
-    # 함수 안에서 전역 변수 next_id 값을 수정하기 위해 global 사용
-    global next_id
+    # DB 연결 생성
+    connection = get_connection()
 
-    # 새 로그 데이터 생성
-    # 사용자가 보낸 category/content에 서버가 id를 붙여줌
-    new_log = {
-        "id": next_id,
-        "category": log.category,
-        "content": log.content
-    }
+    # SQL 실행용 cursor 생성
+    cursor = connection.cursor()
 
-    # logs 리스트에 새 로그 추가
-    logs.append(new_log)
+    # logs 테이블에 새 데이터 추가
+    # ?는 SQL Injection을 막기 위한 자리표시자
+    cursor.execute(
+        "INSERT INTO logs (category, content) VALUES (?, ?)",
+        (log.category, log.content)
+    )
 
-    # 다음 로그를 위해 id 값을 1 증가
-    next_id += 1
+    # 방금 생성된 데이터의 id 가져오기
+    new_log_id = cursor.lastrowid
 
-    # 생성된 로그를 응답으로 반환
+    # 변경사항 저장
+    connection.commit()
+
+    # DB 연결 닫기
+    connection.close()
+
+    # 생성된 로그 정보를 응답으로 반환
     return {
         "message": "log created",
-        "log": new_log
+        "log": {
+            "id": new_log_id,
+            "category": log.category,
+            "content": log.content
+        }
     }
-
-
-# GET /logs/{log_id}
-# 특정 id를 가진 로그 1개 조회
-@app.get("/logs/{log_id}")
-def get_log(log_id: int):
-    # logs 리스트에서 id가 log_id와 같은 로그를 찾음
-    for log in logs:
-        if log["id"] == log_id:
-            return log
-
-    # 반복문을 다 돌았는데도 못 찾으면 404 에러 반환
-    raise HTTPException(status_code=404, detail="Log not found")
-
-
-# DELETE /logs/{log_id}
-# 특정 id를 가진 로그 삭제
-@app.delete("/logs/{log_id}")
-def delete_log(log_id: int):
-    # enumerate는 인덱스와 값을 같이 꺼내줌
-    # index: 리스트에서 몇 번째인지
-    # log: 실제 로그 데이터
-    for index, log in enumerate(logs):
-        if log["id"] == log_id:
-            # 해당 위치의 로그를 리스트에서 삭제
-            deleted_log = logs.pop(index)
-
-            # 삭제한 로그 정보를 응답으로 반환
-            return {
-                "message": "log deleted",
-                "log": deleted_log
-            }
-
-    # 삭제할 id를 찾지 못하면 404 에러 반환
-    raise HTTPException(status_code=404, detail="Log not found")

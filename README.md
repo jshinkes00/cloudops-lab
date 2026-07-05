@@ -29,8 +29,8 @@
 ## Progress
 
 - [x] 프로젝트 초기 세팅
-- [ ] FastAPI 로컬 서버 실행
-- [ ] `/health` API 구현
+- [x] FastAPI 로컬 서버 실행
+- [x] `/health` API 구현
 - [ ] SQLite 연결
 - [ ] AWS EC2 배포
 - [ ] Nginx 설정
@@ -38,3 +38,27 @@
 - [ ] Docker 적용
 - [ ] GitHub Actions 배포 자동화
 - [ ] CLF-C02 공부 기록 정리
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/` | API 기본 메시지 확인 |
+| GET | `/health` | 서버 상태 확인 |
+| GET | `/logs` | 기록 목록 조회 |
+| POST | `/logs` | 기록 생성 |
+
+## Example Request
+
+```json
+{
+  "category": "study",
+  "content": "FastAPI logs API를 만들었다."
+}
+```
+
+## Test URL
+
+- Swagger Docs: `http://127.0.0.1:8000/docs`
+- Health Check: `http://127.0.0.1:8000/health`
+- Logs: `http://127.0.0.1:8000/logs`
