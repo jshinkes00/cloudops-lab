@@ -128,3 +128,85 @@ def create_log(log: LogCreate):
             "content": log.content
         }
     }
+
+# GET /logs/{log_id}
+# SQLite DB에서 특정 id를 가진 로그 하나만 조회하는 API
+@app.get("/logs/{log_id}")
+def get_log(log_id: int):
+    # DB 연결 생성
+    connection = get_connection()
+
+    # SQL 명령어 실행용 cursor 생성
+    cursor = connection.cursor()
+
+    # logs 테이블에서 id가 log_id와 같은 데이터 하나 조회
+    # ? 자리에는 아래 튜플의 log_id 값이 들어감
+    cursor.execute(
+        "SELECT id, category, content FROM logs WHERE id = ?",
+        (log_id,)
+    )
+
+    # 조회 결과 한 줄 가져오기
+    # 결과가 있으면 row에 데이터가 들어가고, 없으면 None이 들어감
+    row = cursor.fetchone()
+
+    # DB 연결 닫기
+    connection.close()
+
+    # 해당 id의 로그가 없으면 404 에러 반환
+    if row is None:
+        raise HTTPException(status_code=404, detail="Log not found")
+
+    # 조회 결과를 JSON으로 반환
+    return {
+        "id": row["id"],
+        "category": row["category"],
+        "content": row["content"]
+    }
+
+
+# DELETE /logs/{log_id}
+# SQLite DB에서 특정 id를 가진 로그를 삭제하는 API
+@app.delete("/logs/{log_id}")
+def delete_log(log_id: int):
+    # DB 연결 생성
+    connection = get_connection()
+
+    # SQL 명령어 실행용 cursor 생성
+    cursor = connection.cursor()
+
+    # 삭제하기 전에 해당 로그가 존재하는지 먼저 조회
+    cursor.execute(
+        "SELECT id, category, content FROM logs WHERE id = ?",
+        (log_id,)
+    )
+
+    # 조회 결과 한 줄 가져오기
+    row = cursor.fetchone()
+
+    # 삭제할 로그가 없으면 DB 연결 닫고 404 에러 반환
+    if row is None:
+        connection.close()
+        raise HTTPException(status_code=404, detail="Log not found")
+
+    # 해당 id의 로그 삭제
+    cursor.execute(
+        "DELETE FROM logs WHERE id = ?",
+        (log_id,)
+    )
+
+    # 삭제 변경사항 저장
+    connection.commit()
+
+    # DB 연결 닫기
+    connection.close()
+
+    # 삭제한 로그 정보를 응답으로 반환
+    return {
+        "message": "log deleted",
+        "log": {
+            "id": row["id"],
+            "category": row["category"],
+            "content": row["content"]
+        }
+    }
