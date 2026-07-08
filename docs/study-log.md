@@ -111,3 +111,23 @@
 - [ ] `GET /logs/{log_id}`를 SQLite 방식으로 구현하기
 - [ ] `DELETE /logs/{log_id}`를 SQLite 방식으로 구현하기
 - [ ] README에 SQLite 사용 내용 추가하기
+
+## 2026-07-07
+
+### 오늘 한 일
+- SQLite DB에서 특정 로그 하나를 조회하는 `GET /logs/{log_id}` API를 만들었다.
+- SQLite DB에서 특정 로그를 삭제하는 `DELETE /logs/{log_id}` API를 만들었다.
+- `WHERE id = ?`를 사용해서 특정 id의 데이터만 조회/삭제했다.
+- 존재하지 않는 id를 요청하면 404 에러를 반환하도록 했다.
+
+### 배운 것
+- `SELECT ... WHERE id = ?`는 특정 id를 가진 데이터만 조회할 때 사용한다.
+- `DELETE ... WHERE id = ?`는 특정 id를 가진 데이터만 삭제할 때 사용한다.
+- `fetchone()`은 조회 결과에서 한 줄만 가져온다.
+- 조회 결과가 없으면 `None`이 나온다.
+- `HTTPException(status_code=404)`는 요청한 데이터를 찾지 못했을 때 사용한다.
+
+### 다음 할 일
+- [ ] README에 API 목록 정리하기
+- [ ] SQLite 코드 리팩토링하기
+- [ ] 다음 단계로 AWS EC2 배포 준비하기
