@@ -1,6 +1,6 @@
 # FastAPI 프레임워크에서 FastAPI 클래스를 가져옴
 # FastAPI: API 서버 객체를 만들 때 사용
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
 # Pydantic의 BaseModel을 가져옴
 # 클라이언트가 보내는 JSON 데이터 형식을 정의하고 검사할 때 사용
@@ -46,6 +46,16 @@ class LogCreate(BaseModel):
     # 기록 내용
     content: str
 
+# PUT /logs/{log_id} 요청으로 들어올 데이터 형식 정의
+# 기존 로그를 수정할 때 사용함
+
+class LogUpdate(BaseModel):
+
+    #수정할 기록 종류
+    category:str
+
+    #수정할 기록 내용
+    content:str
 
 # GET /
 # API 기본 접속 확인용
@@ -208,5 +218,52 @@ def delete_log(log_id: int):
             "id": row["id"],
             "category": row["category"],
             "content": row["content"]
+        }
+    }
+
+# PUT /logs/{log_id}
+# SQLite DB에서 특정 id를 가진 로그를 수정하는 API
+@app.put("/logs/{log_id}")
+def update_log(log_id: int, log: LogUpdate):
+    # DB 연결 생성
+    connection = get_connection()
+
+    # SQL 명령어 실행용 cursor 생성
+    cursor = connection.cursor()
+
+    # 수정하기 전에 해당 id의 로그가 존재하는지 먼저 확인
+    cursor.execute(
+        "SELECT id, category, content FROM logs WHERE id = ?",
+        (log_id,)
+    )
+
+    # 조회 결과 한 줄 가져오기
+    row = cursor.fetchone()
+
+    # 해당 id의 로그가 없으면 404 에러 반환
+    if row is None:
+        connection.close()
+        raise HTTPException(status_code=404, detail="Log not found")
+
+    # 해당 id의 로그 수정
+    # category와 content를 새 값으로 변경
+    cursor.execute(
+        "UPDATE logs SET category = ?, content = ? WHERE id = ?",
+        (log.category, log.content, log_id)
+    )
+
+    # 변경사항 저장
+    connection.commit()
+
+    # DB 연결 닫기
+    connection.close()
+
+    # 수정된 로그 정보를 응답으로 반환
+    return {
+        "message": "log updated",
+        "log": {
+            "id": log_id,
+            "category": log.category,
+            "content": log.content
         }
     }
